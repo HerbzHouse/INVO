@@ -351,34 +351,55 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div id="page-quickpick" class="content" style="display:none;padding:0;background:var(--bg);">
       <div class="mobile-wrap">
         <div class="mobile-head">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:white;">INVO</div>
             <div id="qp-location" style="font-size:11px;background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:20px;color:white;"></div>
           </div>
           <div class="mobile-head-title">⚡ Quick Pick</div>
-          <div style="font-size:12px;opacity:0.6;margin-top:2px;">Pick stock from a pallet</div>
+          <div style="font-size:12px;opacity:0.6;margin-top:2px;">Search a product to see all pallets and adjust stock</div>
+          <!-- SEARCH -->
+          <div style="margin-top:14px;position:relative;">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;">🔍</span>
+            <input id="qp-search" type="text" placeholder="Search product name or SKU..."
+              style="width:100%;padding:13px 14px 13px 44px;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;background:rgba(255,255,255,0.15);color:white;::placeholder{color:rgba(255,255,255,0.5)}"
+              oninput="qpSearchInput(this.value)" autocomplete="off">
+          </div>
+          <!-- SEARCH RESULTS DROPDOWN -->
+          <div id="qp-search-results" style="display:none;background:white;border-radius:10px;margin-top:6px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.2);max-height:220px;overflow-y:auto;"></div>
         </div>
+
         <div class="mobile-body">
-          <div class="m-card"><div class="m-card-label">Step 1 — Select Pallet</div><select class="form-select" id="qp-pallet" onchange="loadQpProducts()"><option value="">Choose pallet...</option></select></div>
-          <div class="m-card">
-            <div class="m-card-label">Step 2 — Select Product</div>
-            <select class="form-select" id="qp-product" onchange="updateQpSummary()"><option value="">Choose product...</option></select>
-            <div id="qp-product-info" style="margin-top:8px;background:var(--bg);border-radius:8px;padding:10px;display:none;">
-              <div style="font-weight:700;font-size:13px;color:var(--navy);" id="qp-prod-name">—</div>
-              <div style="font-size:11px;color:var(--muted);">On this pallet: <strong id="qp-available">0</strong> units available</div>
+          <!-- SELECTED PRODUCT HEADER -->
+          <div id="qp-selected-product" style="display:none;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+              <div id="qp-prod-thumb" style="width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,#e6f0ff,#f0e6ff);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">📦</div>
+              <div style="flex:1;">
+                <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--navy);" id="qp-prod-name-display">—</div>
+                <div style="font-size:12px;color:var(--muted);" id="qp-prod-sku-display">—</div>
+              </div>
+              <button onclick="resetQuickPick()" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--muted);">✕ Clear</button>
+            </div>
+
+            <!-- PALLET ROWS -->
+            <div id="qp-pallet-rows"></div>
+
+            <!-- ADD TO ANOTHER PALLET -->
+            <div class="m-card" style="margin-top:4px;">
+              <div class="m-card-label">+ Add to Another Pallet</div>
+              <select class="form-select" id="qp-add-pallet" style="margin-bottom:10px;"><option value="">Select pallet...</option></select>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input class="form-input ni" type="number" id="qp-add-qty" value="1" min="1" style="width:100px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="qpAddToPallet()">+ Add Stock</button>
+              </div>
             </div>
           </div>
-          <div class="m-card">
-            <div class="m-card-label">Step 3 — Quantity to Remove</div>
-            <div class="qty-ctrl"><button class="qty-btn" onclick="changeQpQty(-1)">−</button><div class="qty-num" id="qp-qty">1</div><button class="qty-btn" onclick="changeQpQty(1)">+</button></div>
-            <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;" id="qp-remaining"></div>
+
+          <!-- EMPTY STATE -->
+          <div id="qp-empty-state" style="text-align:center;padding:48px 24px;color:var(--muted);">
+            <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+            <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px;">Search for a product</div>
+            <div style="font-size:13px;">Type a product name or SKU above to see all pallets and adjust stock levels</div>
           </div>
-          <div class="m-card" id="qp-summary" style="background:#f0fff8;border-color:#a8e6c8;display:none;">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Summary</div>
-            <div style="font-size:13px;font-weight:600;" id="qp-summary-text">—</div>
-          </div>
-          <button class="confirm-btn" onclick="doQuickPick()">✓ CONFIRM PICK</button>
-          <button class="cancel-btn" onclick="resetQuickPick()">Reset</button>
         </div>
       </div>
     </div>
@@ -468,6 +489,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <div><label class="form-label">Min Stock Level</label><input class="form-input ni" type="number" id="prod-min" value="0"></div>
     </div>
     <div class="fg"><label class="form-label">Location *</label><select class="form-select" id="prod-loc-sel"></select></div>
+    <div class="fg">
+      <label class="form-label">Product Image</label>
+      <div id="prod-img-preview" style="display:none;margin-bottom:8px;"><img id="prod-img-preview-img" style="width:80px;height:80px;border-radius:10px;object-fit:cover;border:1px solid var(--border);"></div>
+      <input type="file" id="prod-img-file" accept="image/*" style="width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;" onchange="previewProdImage(this)">
+      <input type="hidden" id="prod-img-url">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">JPG, PNG, WEBP — max 5MB. On mobile you can use your camera.</div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-danger" id="prod-del-btn" onclick="deleteProduct()" style="display:none;">🗑 Delete Product</button>
       <div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeModal('modal-product')">Cancel</button><button class="btn btn-primary" onclick="saveProduct()">Save</button></div>
@@ -734,12 +762,15 @@ async function loadProducts() {
     const stk = ts(p), low = p.min_stock_level>0&&stk<=p.min_stock_level;
     const bc = low?(stk===0?'badge-red':'badge-amber'):'badge-green';
     const bt = low?(stk===0?'Out of Stock':'Low Stock'):'In Stock';
+    const imgHtml = p.image_url
+      ? `<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover;">`
+      : emos[i%emos.length];
     return `<div class="prod-card">
       <div class="prod-card-actions">
         <button class="btn btn-secondary btn-sm btn-icon" onclick='openEditModal("product",${JSON.stringify(p)})' title="Edit">✏</button>
         <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProd('${p.id}')" title="Delete">🗑</button>
       </div>
-      <div class="prod-img">${emos[i%emos.length]}</div>
+      <div class="prod-img" style="padding:0;overflow:hidden;">${imgHtml}</div>
       <div class="prod-info">
         <div class="prod-name">${p.name}</div><div class="prod-sku">SKU: ${p.sku}</div>
         <div class="prod-bottom"><div><div class="prod-qty" style="${low?'color:var(--red)':''}">${stk}</div><div style="font-size:10px;color:var(--muted);">units</div></div><span class="badge ${bc}">${bt}</span></div>
@@ -749,10 +780,40 @@ async function loadProducts() {
   }).join('') + `<div class="prod-card" style="border:2px dashed var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:180px;" onclick="openAddModal('product')"><div style="text-align:center;color:var(--muted);"><div style="font-size:28px;">+</div><div style="font-size:13px;font-weight:600;">Add Product</div></div></div>`;
 }
 
+function previewProdImage(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('prod-img-preview-img').src = e.target.result;
+    document.getElementById('prod-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadProdImage(file) {
+  const ext = file.name.split('.').pop();
+  const path = `${CU.id}/${Date.now()}.${ext}`;
+  const { data, error } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
+  if (error) { showToast('Image upload failed: ' + error.message, 'error'); return null; }
+  const { data: urlData } = sb.storage.from('product-images').getPublicUrl(path);
+  return urlData.publicUrl;
+}
+
 async function saveProduct() {
   const id = v('prod-id'), name = v('prod-name').trim(), sku = v('prod-sku').trim(), locId = v('prod-loc-sel');
   if (!name||!sku||!locId) return showToast('Name, SKU and location required','error');
+
+  // Handle image upload
+  let imageUrl = v('prod-img-url') || null;
+  const imgFile = document.getElementById('prod-img-file').files[0];
+  if (imgFile) {
+    showToast('Uploading image...', '');
+    imageUrl = await uploadProdImage(imgFile);
+    if (!imageUrl) return;
+  }
+
   const payload = {name,sku,description:v('prod-desc'),cost_price:parseFloat(v('prod-cost'))||0,sell_price:parseFloat(v('prod-sell'))||0,weight_kg:parseFloat(v('prod-weight'))||0,units_per_box:parseInt(v('prod-units'))||1,box_length_cm:parseFloat(v('prod-l'))||0,box_width_cm:parseFloat(v('prod-w'))||0,box_height_cm:parseFloat(v('prod-h'))||0,category:v('prod-cat'),barcode:v('prod-barcode'),location_id:locId,min_stock_level:parseInt(v('prod-min'))||0};
+  if (imageUrl) payload.image_url = imageUrl;
   const { error } = id ? await sb.from('products').update(payload).eq('id',id) : await sb.from('products').insert({...payload,created_by:CU.id});
   if (error) return showToast('Error: '+error.message,'error');
   closeModal('modal-product'); showToast(id?'Product updated!':'Product added!','success'); loadProducts();
@@ -777,59 +838,252 @@ async function loadHistory() {
   tb.innerHTML = data.map(m=>`<tr><td class="muted">${fmtDate(m.created_at)}</td><td><span class="badge ${bc[m.action_type]||'badge-grey'}">${m.action_type}</span></td><td class="bold">${m.products?.name||'—'}</td><td class="muted">${m.pallets?.pallet_code||'—'}</td><td class="${m.qty_change>=0?'qty-up':'qty-down'}">${m.qty_change>=0?'+':''}${m.qty_change}</td><td>${m.qty_before}</td><td>${m.qty_after}</td><td>${m.profiles?.full_name||'—'}</td></tr>`).join('');
 }
 
-// QUICK PICK
-async function loadQpProducts() {
-  const pid = v('qp-pallet'), sel = document.getElementById('qp-product');
-  sel.innerHTML='<option value="">Choose product...</option>';
-  document.getElementById('qp-product-info').style.display='none';
-  document.getElementById('qp-summary').style.display='none';
-  if (!pid) return;
-  const { data } = await sb.from('inventory_allocations').select('*, products(id,name,sku)').eq('pallet_id',pid).gt('qty',0);
-  (data||[]).forEach(a => { const o=new Option(`${a.products?.name} (${a.qty} available)`,a.id); o.dataset.qty=a.qty; o.dataset.name=a.products?.name; sel.add(o); });
+// ================================================================
+// QUICK PICK — New powerful version
+// ================================================================
+let qpCurrentProduct = null; // { id, name, sku, image_url }
+let qpAllocations = [];       // live allocations for current product
+let qpPendingChanges = {};    // { allocId: deltaQty }
+let qpSearchTimer = null;
+
+function qpSearchInput(val) {
+  clearTimeout(qpSearchTimer);
+  const res = document.getElementById('qp-search-results');
+  if (!val.trim()) { res.style.display='none'; return; }
+  qpSearchTimer = setTimeout(() => qpDoSearch(val.trim()), 250);
 }
 
-function updateQpSummary() {
-  const sel = document.getElementById('qp-product'), opt = sel.options[sel.selectedIndex];
-  if (!opt||!opt.dataset.qty) { document.getElementById('qp-product-info').style.display='none'; return; }
-  qpAvail=parseInt(opt.dataset.qty); qpQty=1;
-  document.getElementById('qp-qty').textContent=1;
-  document.getElementById('qp-prod-name').textContent=opt.dataset.name;
-  document.getElementById('qp-available').textContent=qpAvail;
-  document.getElementById('qp-product-info').style.display='block';
-  refreshQpRemaining();
+async function qpDoSearch(query) {
+  const res = document.getElementById('qp-search-results');
+  const q = query.toLowerCase();
+  const matches = PRODS.filter(p =>
+    p.name.toLowerCase().includes(q) || (p.sku||'').toLowerCase().includes(q)
+  ).slice(0, 8);
+  if (!matches.length) {
+    res.style.display='block';
+    res.innerHTML='<div style="padding:14px;font-size:13px;color:var(--muted);text-align:center;">No products found</div>';
+    return;
+  }
+  res.style.display='block';
+  res.innerHTML = matches.map(p => `
+    <div onclick="qpSelectProduct('${p.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+      <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#e6f0ff,#f0e6ff);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+        ${p.image_url ? `<img src="${p.image_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">` : '📦'}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:13px;color:var(--navy);">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted);">SKU: ${p.sku}</div>
+      </div>
+    </div>`).join('');
 }
 
-function changeQpQty(d) { qpQty=Math.max(1,Math.min(qpAvail,qpQty+d)); document.getElementById('qp-qty').textContent=qpQty; refreshQpRemaining(); }
+async function qpSelectProduct(prodId) {
+  const prod = PRODS.find(p => p.id === prodId);
+  if (!prod) return;
+  qpCurrentProduct = prod;
+  qpPendingChanges = {};
 
-function refreshQpRemaining() {
-  document.getElementById('qp-remaining').textContent=`${qpAvail} available → will leave ${qpAvail-qpQty}`;
-  const pt = document.getElementById('qp-pallet').options[document.getElementById('qp-pallet').selectedIndex]?.text?.split(' —')[0]||'—';
-  const pn = document.getElementById('qp-product').options[document.getElementById('qp-product').selectedIndex]?.dataset?.name||'—';
-  document.getElementById('qp-summary-text').textContent=`−${qpQty}x ${pn} from ${pt}`;
-  document.getElementById('qp-summary').style.display='block';
+  // Hide search results, clear search
+  document.getElementById('qp-search-results').style.display='none';
+  document.getElementById('qp-search').value = prod.name;
+
+  // Set product header
+  document.getElementById('qp-prod-name-display').textContent = prod.name;
+  document.getElementById('qp-prod-sku-display').textContent = 'SKU: ' + prod.sku;
+  if (prod.image_url) {
+    document.getElementById('qp-prod-thumb').innerHTML = `<img src="${prod.image_url}" style="width:52px;height:52px;border-radius:10px;object-fit:cover;">`;
+  } else {
+    document.getElementById('qp-prod-thumb').textContent = '📦';
+  }
+
+  // Show selected product section, hide empty state
+  document.getElementById('qp-selected-product').style.display='block';
+  document.getElementById('qp-empty-state').style.display='none';
+
+  // Fill "add to pallet" select
+  const addSel = document.getElementById('qp-add-pallet');
+  addSel.innerHTML = '<option value="">Select pallet...</option>';
+  PALLETS.filter(p => p.status !== 'Quarantine').forEach(p => {
+    addSel.add(new Option(`${p.pallet_code}${p.rack_bays?' — Bay '+p.rack_bays.bay_code:''}`, p.id));
+  });
+
+  await qpLoadPalletRows();
 }
 
-async function doQuickPick() {
-  const palletId=v('qp-pallet'), allocId=v('qp-product');
-  if (!palletId||!allocId) return showToast('Select pallet and product','error');
-  if (qpQty>qpAvail) return showToast('Cannot pick more than available','error');
-  const nq=qpAvail-qpQty, pallet=PALLETS.find(p=>p.id===palletId);
-  const opt=document.getElementById('qp-product').options[document.getElementById('qp-product').selectedIndex];
-  await sb.from('inventory_allocations').update({qty:nq,updated_at:new Date().toISOString(),last_updated_by:CU.id}).eq('id',allocId);
-  const { data: alloc } = await sb.from('inventory_allocations').select('product_id').eq('id',allocId).single();
-  await sb.from('stock_movements').insert({product_id:alloc?.product_id,pallet_id:palletId,location_id:pallet?.location_id,action_type:'Pick',qty_change:-qpQty,qty_before:qpAvail,qty_after:nq,performed_by:CU.id});
-  showToast(`✓ Picked ${qpQty}x ${opt.dataset.name}`,'success');
-  resetQuickPick(); await refreshGlobal();
+async function qpLoadPalletRows() {
+  if (!qpCurrentProduct) return;
+  const { data } = await sb.from('inventory_allocations')
+    .select('*, pallets(id, pallet_code, rack_bays(bay_code), locations(name))')
+    .eq('product_id', qpCurrentProduct.id)
+    .order('qty', { ascending: false });
+
+  qpAllocations = data || [];
+  const container = document.getElementById('qp-pallet-rows');
+
+  if (!qpAllocations.length) {
+    container.innerHTML = `<div class="m-card" style="text-align:center;color:var(--muted);padding:20px;">
+      <div style="font-size:24px;margin-bottom:8px;">📭</div>
+      <div style="font-size:13px;">Not allocated to any pallets yet.</div>
+      <div style="font-size:12px;margin-top:4px;">Use the section below to add it to a pallet.</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = qpAllocations.map(a => {
+    const pallet = a.pallets;
+    const bay = pallet?.rack_bays?.bay_code || 'No bay';
+    const loc = pallet?.locations?.name || '—';
+    const pending = qpPendingChanges[a.id] || 0;
+    const displayQty = a.qty + pending;
+    return `
+    <div class="m-card" id="qp-row-${a.id}" style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--navy);">${pallet?.pallet_code||'—'}</div>
+          <div style="font-size:12px;color:var(--muted);">Bay ${bay} · ${loc}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--navy);" id="qp-disp-${a.id}">${displayQty}</div>
+          <div style="font-size:10px;color:var(--muted);">units</div>
+        </div>
+      </div>
+
+      <!-- +/- CONTROLS -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+        <button onclick="qpAdjust('${a.id}', ${a.qty}, -1)" style="width:48px;height:48px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:22px;cursor:pointer;color:var(--red);font-weight:700;display:flex;align-items:center;justify-content:center;">−</button>
+        <div style="flex:1;text-align:center;">
+          <div id="qp-pending-${a.id}" style="font-size:12px;display:none;"></div>
+        </div>
+        <button onclick="qpAdjust('${a.id}', ${a.qty}, 1)" style="width:48px;height:48px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:22px;cursor:pointer;color:var(--emerald);font-weight:700;display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div style="display:flex;gap:8px;">
+        <button onclick="qpConfirmRow('${a.id}', ${a.qty}, '${pallet?.id}', '${pallet?.locations?.id||''}')" class="btn btn-primary btn-sm" style="flex:1;" id="qp-confirm-${a.id}" disabled>✓ Confirm</button>
+        <button onclick="qpRemoveFromPallet('${a.id}', '${pallet?.pallet_code}')" class="btn btn-danger btn-sm">🗑 Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function qpAdjust(allocId, baseQty, delta) {
+  if (!qpPendingChanges[allocId]) qpPendingChanges[allocId] = 0;
+  const newPending = qpPendingChanges[allocId] + delta;
+  const newTotal = baseQty + newPending;
+  if (newTotal < 0) return; // can't go below 0
+  qpPendingChanges[allocId] = newPending;
+
+  // Update display qty
+  document.getElementById(`qp-disp-${allocId}`).textContent = newTotal;
+  document.getElementById(`qp-disp-${allocId}`).style.color = newPending < 0 ? 'var(--red)' : newPending > 0 ? 'var(--emerald)' : 'var(--navy)';
+
+  // Update pending label
+  const pendEl = document.getElementById(`qp-pending-${allocId}`);
+  if (newPending !== 0) {
+    pendEl.style.display = 'block';
+    pendEl.style.color = newPending < 0 ? 'var(--red)' : 'var(--emerald)';
+    pendEl.textContent = (newPending > 0 ? '+' : '') + newPending + ' pending';
+  } else {
+    pendEl.style.display = 'none';
+  }
+
+  // Enable/disable confirm button
+  const confirmBtn = document.getElementById(`qp-confirm-${allocId}`);
+  confirmBtn.disabled = (newPending === 0);
+}
+
+async function qpConfirmRow(allocId, baseQty, palletId, locationId) {
+  const delta = qpPendingChanges[allocId] || 0;
+  if (delta === 0) return;
+  const newQty = baseQty + delta;
+  const actionType = delta < 0 ? 'Pick' : 'Add';
+
+  await sb.from('inventory_allocations').update({
+    qty: newQty, updated_at: new Date().toISOString(), last_updated_by: CU.id
+  }).eq('id', allocId);
+
+  await sb.from('stock_movements').insert({
+    product_id: qpCurrentProduct.id, pallet_id: palletId,
+    location_id: locationId || null,
+    action_type: actionType,
+    qty_change: delta, qty_before: baseQty, qty_after: newQty,
+    performed_by: CU.id
+  });
+
+  const msg = delta < 0
+    ? `✓ Picked ${Math.abs(delta)}x ${qpCurrentProduct.name}`
+    : `✓ Added ${delta}x ${qpCurrentProduct.name}`;
+  showToast(msg, 'success');
+
+  // Reload this product's rows
+  await qpLoadPalletRows();
+  await refreshGlobal();
+}
+
+async function qpRemoveFromPallet(allocId, palletCode) {
+  if (!confirm(`Remove ${qpCurrentProduct?.name} from ${palletCode} entirely?`)) return;
+  await sb.from('inventory_allocations').delete().eq('id', allocId);
+  showToast('Product removed from pallet', 'success');
+  await qpLoadPalletRows();
+  await refreshGlobal();
+}
+
+async function qpAddToPallet() {
+  const palletId = v('qp-add-pallet');
+  const qty = parseInt(v('qp-add-qty'));
+  if (!palletId || !qty || qty < 1) return showToast('Select a pallet and enter a quantity', 'error');
+  if (!qpCurrentProduct) return showToast('No product selected', 'error');
+
+  const pallet = PALLETS.find(p => p.id === palletId);
+
+  // Check if allocation already exists
+  const { data: existing } = await sb.from('inventory_allocations')
+    .select('*').eq('product_id', qpCurrentProduct.id).eq('pallet_id', palletId).single();
+
+  const oldQty = existing?.qty || 0;
+  const newQty = oldQty + qty;
+
+  if (existing) {
+    await sb.from('inventory_allocations').update({
+      qty: newQty, updated_at: new Date().toISOString(), last_updated_by: CU.id
+    }).eq('id', existing.id);
+  } else {
+    await sb.from('inventory_allocations').insert({
+      product_id: qpCurrentProduct.id, pallet_id: palletId,
+      location_id: pallet?.location_id, qty: newQty, last_updated_by: CU.id
+    });
+  }
+
+  await sb.from('stock_movements').insert({
+    product_id: qpCurrentProduct.id, pallet_id: palletId,
+    location_id: pallet?.location_id,
+    action_type: 'Add', qty_change: qty, qty_before: oldQty, qty_after: newQty,
+    performed_by: CU.id
+  });
+
+  showToast(`✓ Added ${qty}x ${qpCurrentProduct.name} to ${pallet?.pallet_code}`, 'success');
+  document.getElementById('qp-add-qty').value = 1;
+  document.getElementById('qp-add-pallet').value = '';
+  await qpLoadPalletRows();
+  await refreshGlobal();
 }
 
 function resetQuickPick() {
-  document.getElementById('qp-pallet').value='';
-  document.getElementById('qp-product').innerHTML='<option value="">Choose product...</option>';
-  document.getElementById('qp-product-info').style.display='none';
-  document.getElementById('qp-summary').style.display='none';
-  document.getElementById('qp-remaining').textContent='';
-  qpQty=1; qpAvail=0; document.getElementById('qp-qty').textContent='1';
+  qpCurrentProduct = null; qpAllocations = []; qpPendingChanges = {};
+  document.getElementById('qp-search').value = '';
+  document.getElementById('qp-search-results').style.display = 'none';
+  document.getElementById('qp-selected-product').style.display = 'none';
+  document.getElementById('qp-empty-state').style.display = 'block';
 }
+
+// Close search results when clicking outside
+document.addEventListener('click', e => {
+  const res = document.getElementById('qp-search-results');
+  const input = document.getElementById('qp-search');
+  if (res && input && !res.contains(e.target) && e.target !== input) {
+    res.style.display = 'none';
+  }
+});
 
 // LOGIN / LOGOUT
 async function doLogin() {
@@ -898,6 +1152,12 @@ function openEditModal(type, data) {
     document.getElementById('prod-cat').value=data.category||'';
     document.getElementById('prod-min').value=data.min_stock_level||0;
     if (data.location_id) document.getElementById('prod-loc-sel').value=data.location_id;
+    // Load existing image
+    document.getElementById('prod-img-url').value = data.image_url || '';
+    if (data.image_url) {
+      document.getElementById('prod-img-preview-img').src = data.image_url;
+      document.getElementById('prod-img-preview').style.display = 'block';
+    }
     document.getElementById('prod-del-btn').style.display='inline-flex';
   }
   document.getElementById(`modal-${type}`).classList.add('open');
@@ -928,6 +1188,9 @@ function clearModal(type) {
     ['prod-cost','prod-sell','prod-weight','prod-l','prod-w','prod-h'].forEach(id=>document.getElementById(id).value=0);
     document.getElementById('prod-units').value=1;
     document.getElementById('prod-min').value=0;
+    document.getElementById('prod-img-url').value='';
+    document.getElementById('prod-img-file').value='';
+    document.getElementById('prod-img-preview').style.display='none';
     document.getElementById('prod-del-btn').style.display='none';
   }
 }
