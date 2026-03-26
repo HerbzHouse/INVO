@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>INVO — Warehouse Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --navy: #0f3460;
+  --navy-dark: #0a2444;
+  --navy-light: #1a4a7a;
+  --violet: #533483;
+  --emerald: #1a7a4a;
+  --amber: #f59e0b;
+  --red: #e53e3e;
+  --bg: #f0f4fa;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1a202c;
+  --muted: #718096;
+  --sidebar-w: 220px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+/* ── SCREENS ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; }
+
+/* ── LOGIN ── */
+#screen-login {
+  align-items: center; justify-content: center;
+  background: var(--navy-dark); position: relative; overflow: hidden;
+}
+#screen-login::before {
+  content: ''; position: absolute;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(83,52,131,0.25) 0%, transparent 70%);
+  top: -250px; right: -250px; pointer-events: none;
+}
+.login-card {
+  background: white; border-radius: 20px; padding: 48px;
+  width: 420px; position: relative; z-index: 1;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.35);
+}
+.logo { font-family: 'Syne', sans-serif; font-size: 40px; font-weight: 800; color: var(--navy); letter-spacing: -2px; }
+.logo span { color: var(--violet); }
+.tagline { font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 32px; }
+.form-label { display: block; font-size: 11px; font-weight: 700; color: var(--navy); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.input-wrap { position: relative; margin-bottom: 16px; }
+.input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+.form-input {
+  width: 100%; padding: 12px 14px 12px 40px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+  outline: none; transition: border-color 0.15s; background: white;
+}
+.form-input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(15,52,96,0.08); }
+.form-input.no-icon { padding-left: 14px; }
+.form-select {
+  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+  outline: none; background: white; cursor: pointer; appearance: none;
+}
+.form-select:focus { border-color: var(--navy); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  text-decoration: none;
+}
+.btn-primary { background: var(--navy); color: white; }
+.btn-primary:hover { background: var(--navy-light); }
+.btn-primary:disabled { background: var(--muted); cursor: not-allowed; }
+.btn-secondary { background: var(--bg); color: var(--navy); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-success { background: var(--emerald); color: white; }
+.btn-danger { background: var(--red); color: white; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-full { width: 100%; padding: 14px; font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px; border-radius: 10px; margin-top: 8px; }
+.error-msg { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; display: none; }
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--navy-dark);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  transform: translateX(0); transition: transform 0.25s;
+}
+.sidebar-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo .s-logo { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: white; letter-spacing: -1px; }
+.sidebar-logo .s-logo span { color: #a78bfa; }
+.sidebar-logo .s-sub { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+.loc-switcher { margin: 12px 10px; background: rgba(255,255,255,0.07); border-radius: 10px; padding: 10px 12px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); }
+.loc-switcher .ls-label { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; }
+.loc-switcher .ls-name { font-size: 13px; color: white; font-weight: 600; margin-top: 2px; display: flex; justify-content: space-between; }
+.nav-sec { padding: 8px 12px 2px; font-size: 10px; color: rgba(255,255,255,0.25); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; margin: 1px 8px; border-radius: 8px;
+  cursor: pointer; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500;
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+.nav-item.active { background: var(--violet); color: white; }
+.nav-icon { width: 20px; text-align: center; font-size: 14px; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--red); color: white; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px; }
+.sidebar-foot { margin-top: auto; padding: 14px 10px; border-top: 1px solid rgba(255,255,255,0.08); }
+.user-pill { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; }
+.user-pill:hover { background: rgba(255,255,255,0.07); }
+.u-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--violet); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 12px; flex-shrink: 0; }
+.u-name { font-size: 13px; color: white; font-weight: 500; }
+.u-role { font-size: 11px; color: rgba(255,255,255,0.35); }
+.logout-btn { width: 100%; margin-top: 6px; padding: 7px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); border-radius: 8px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.logout-btn:hover { background: rgba(255,0,0,0.15); color: #ff8080; }
+
+/* ── MAIN ── */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar {
+  background: white; border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: var(--navy); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.search-wrap { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; }
+.search-wrap input { border: none; background: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 13px; width: 200px; color: var(--text); }
+.search-wrap input::placeholder { color: var(--muted); }
+.content { padding: 24px; flex: 1; }
+
+/* ── CARDS ── */
+.card { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+.card-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.card-head h3 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--navy); }
+.card-body { padding: 20px; }
+
+/* ── STATS ── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card { background: white; border-radius: 12px; padding: 18px; border: 1px solid var(--border); border-left: 4px solid transparent; position: relative; }
+.stat-card.c-blue { border-left-color: var(--navy); }
+.stat-card.c-violet { border-left-color: var(--violet); }
+.stat-card.c-green { border-left-color: var(--emerald); }
+.stat-card.c-amber { border-left-color: var(--amber); }
+.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; color: var(--navy); margin: 6px 0 2px; line-height: 1; }
+.stat-sub { font-size: 12px; color: var(--muted); }
+.stat-icon { position: absolute; top: 16px; right: 16px; font-size: 20px; opacity: 0.12; }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-green { background: #e6f9f0; color: #1a7a4a; }
+.badge-blue { background: #e6f0ff; color: #0f3460; }
+.badge-amber { background: #fff4e6; color: #b85c00; }
+.badge-red { background: #ffe6e6; color: #c0392b; }
+.badge-grey { background: #f0f2f8; color: #666; }
+.badge-violet { background: #f0e6ff; color: #533483; }
+
+/* ── TABLE ── */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { background: #f8fafc; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); border-bottom: 2px solid var(--border); white-space: nowrap; }
+.tbl td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: #f8fafc; }
+.tbl .bold { font-weight: 600; color: var(--navy); }
+.tbl .muted { color: var(--muted); font-size: 12px; }
+
+/* ── GRID LAYOUTS ── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+
+/* ── ACTIVITY ── */
+.act-item { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.act-item:last-child { border-bottom: none; }
+.act-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.act-dot.pick { background: var(--amber); }
+.act-dot.add { background: var(--emerald); }
+.act-dot.move { background: var(--violet); }
+.act-title { font-size: 13px; font-weight: 500; }
+.act-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── QTY ── */
+.qty-up { color: var(--emerald); font-weight: 700; }
+.qty-down { color: var(--red); font-weight: 700; }
+
+/* ── ALERT BANNER ── */
+.alert-bar { background: #fff4e6; border: 1px solid #fcd38d; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-size: 13px; color: #7c4a00; }
+
+/* ── PALLET CARD ── */
+.pallet-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.15s; }
+.pallet-card:hover { border-color: var(--navy); box-shadow: 0 4px 16px rgba(15,52,96,0.1); }
+.pc-code { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--navy); }
+.pc-bay { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.pc-stats { display: flex; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.pc-stat-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--navy); }
+.pc-stat-lbl { font-size: 10px; color: var(--muted); }
+
+/* ── BAY GRID ── */
+.bay-row { margin-bottom: 16px; }
+.bay-row-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+.bay-cells { display: flex; flex-wrap: wrap; gap: 8px; }
+.bay-cell { border-radius: 8px; padding: 8px 10px; text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; min-width: 60px; }
+.bay-cell.occupied { background: #e6f0ff; color: var(--navy); border-color: #b3c9ef; }
+.bay-cell.empty { background: #f8fafc; color: var(--muted); border-color: var(--border); }
+.bay-cell.low { background: #fff4e6; color: #b85c00; border-color: #fcd38d; }
+.bay-cell:hover { transform: scale(1.05); }
+.bay-pallet { font-size: 9px; font-weight: 400; margin-top: 2px; opacity: 0.7; }
+
+/* ── PRODUCT CARD ── */
+.prod-card { background: white; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: box-shadow 0.15s; }
+.prod-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+.prod-img { height: 100px; background: linear-gradient(135deg, #e6f0ff, #f0e6ff); display: flex; align-items: center; justify-content: center; font-size: 32px; }
+.prod-info { padding: 12px; }
+.prod-name { font-weight: 700; font-size: 13px; color: var(--navy); }
+.prod-sku { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.prod-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.prod-qty { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--navy); }
+.prod-price { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+/* ── MOBILE QUICK PICK ── */
+.mobile-wrap { max-width: 420px; margin: 0 auto; width: 100%; }
+.mobile-head { background: var(--navy); padding: 20px; color: white; }
+.mobile-head-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+.mobile-head-sub { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+.mobile-body { padding: 14px; background: var(--bg); min-height: calc(100vh - 120px); }
+.m-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.m-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+.qty-ctrl { display: flex; align-items: center; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; }
+.qty-btn { width: 56px; height: 56px; background: var(--bg); border: none; font-size: 24px; cursor: pointer; color: var(--navy); font-weight: 700; flex-shrink: 0; }
+.qty-btn:hover { background: var(--border); }
+.qty-num { flex: 1; text-align: center; font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; color: var(--navy); }
+.confirm-btn { width: 100%; padding: 16px; background: var(--navy); color: white; border: none; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.confirm-btn:hover { background: var(--navy-light); }
+.cancel-btn { width: 100%; padding: 12px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; margin-top: 8px; }
+
+/* ── MODAL ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 16px; padding: 28px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal h2 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 20px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.divider { height: 1px; background: var(--border); margin: 18px 0; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.info-row:last-child { border-bottom: none; }
+.ir-label { font-size: 12px; color: var(--muted); }
+.ir-value { font-size: 13px; font-weight: 600; }
+.progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--navy); color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 999; box-shadow: 0 8px 24px rgba(0,0,0,0.25); transform: translateY(80px); opacity: 0; transition: all 0.3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--emerald); }
+.toast.error { background: var(--red); }
+
+/* ── LOADING ── */
+.loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--navy-dark); }
+.loading-logo { font-family: 'Syne', sans-serif; font-size: 48px; font-weight: 800; color: white; letter-spacing: -2px; animation: pulse 1.5s ease-in-out infinite; }
+.loading-logo span { color: #a78bfa; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .stats-row { grid-template-columns: repeat(2,1fr); }
+  .g2,.g3,.g4 { grid-template-columns: 1fr; }
+  .topbar { padding: 0 14px; }
+  .content { padding: 14px; }
+  .search-wrap { display: none; }
+  .mobile-menu-btn { display: flex !important; }
+}
+.mobile-menu-btn { display: none; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--navy); padding: 4px; }
+.overlay-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; }
+.overlay-bg.open { display: block; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading" class="loading-screen">
+  <div class="loading-logo">INV<span>O</span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MOBILE OVERLAY -->
+<div class="overlay-bg" id="overlay-bg" onclick="closeSidebar()"></div>
+
+<!-- ================================================================
+     LOGIN SCREEN
+     ================================================================ -->
+<div id="screen-login" class="screen">
+  <div class="login-card">
+    <div class="logo">INV<span>O</span></div>
+    <div class="tagline">Warehouse Management System</div>
+    <div id="login-error" class="error-msg"></div>
+    <div class="form-label">Email Address</div>
+    <div class="input-wrap">
+      <span class="input-icon">✉</span>
+      <input class="form-input" type="email" id="login-email" placeholder="you@company.com" autocomplete="email">
+    </div>
+    <div class="form-label">Password</div>
+    <div class="input-wrap">
+      <span class="input-icon">🔒</span>
+      <input class="form-input" type="password" id="login-password" placeholder="Your password" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">SIGN IN</button>
+  </div>
+</div>
+
+<!-- ================================================================
+     APP SHELL (Sidebar + all pages)
+     ================================================================ -->
+<div id="screen-app" class="screen" style="flex-direction:column;">
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="s-logo">INV<span>O</span></div>
+      <div class="s-sub">Warehouse Management</div>
+    </div>
+    <div class="loc-switcher" onclick="showPage('locations')">
+      <div class="ls-label">Current Location</div>
+      <div class="ls-name" id="nav-location">All Locations <span>▾</span></div>
+    </div>
+    <div class="nav-sec">Main</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')"><span class="nav-icon">⊞</span>Dashboard</div>
+    <div class="nav-item" id="nav-locations" onclick="showPage('locations')"><span class="nav-icon">📍</span>Locations</div>
+    <div class="nav-item" id="nav-bays" onclick="showPage('bays')"><span class="nav-icon">🗄</span>Rack Bays</div>
+    <div class="nav-item" id="nav-pallets" onclick="showPage('pallets')"><span class="nav-icon">🟦</span>Pallets</div>
+    <div class="nav-sec">Inventory</div>
+    <div class="nav-item" id="nav-inventory" onclick="showPage('inventory')"><span class="nav-icon">📋</span>Allocations</div>
+    <div class="nav-item" id="nav-products" onclick="showPage('products')"><span class="nav-icon">📦</span>Products</div>
+    <div class="nav-item" id="nav-history" onclick="showPage('history')"><span class="nav-icon">📝</span>History</div>
+    <div class="nav-sec">Mobile</div>
+    <div class="nav-item" id="nav-quickpick" onclick="showPage('quickpick')"><span class="nav-icon">⚡</span>Quick Pick</div>
+    <div class="sidebar-foot">
+      <div class="user-pill">
+        <div class="u-avatar" id="nav-avatar">?</div>
+        <div>
+          <div class="u-name" id="nav-name">Loading...</div>
+          <div class="u-role" id="nav-role">—</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main" id="main-content">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="mobile-menu-btn" onclick="openSidebar()">☰</button>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="search-wrap"><span>🔍</span><input placeholder="Search..." id="search-input"></div>
+        <button class="btn btn-primary btn-sm" onclick="showPage('quickpick')">⚡ Quick Pick</button>
+      </div>
+    </div>
+
+    <!-- PAGE: DASHBOARD -->
+    <div id="page-dashboard" class="content">
+      <div id="alert-banner" class="alert-bar" style="display:none;">
+        ⚠️ <span id="alert-text">Low stock alerts need attention.</span>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card c-blue"><div class="stat-icon">📦</div><div class="stat-label">Total Products</div><div class="stat-value" id="stat-products">—</div><div class="stat-sub">Active SKUs</div></div>
+        <div class="stat-card c-violet"><div class="stat-icon">🟦</div><div class="stat-label">Active Pallets</div><div class="stat-value" id="stat-pallets">—</div><div class="stat-sub">Across all locations</div></div>
+        <div class="stat-card c-green"><div class="stat-icon">📍</div><div class="stat-label">Locations</div><div class="stat-value" id="stat-locations">—</div><div class="stat-sub">Warehouses</div></div>
+        <div class="stat-card c-amber"><div class="stat-icon">⚠️</div><div class="stat-label">Low Stock</div><div class="stat-value" id="stat-alerts">—</div><div class="stat-sub">Need attention</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-head"><h3>Recent Stock Movements</h3></div>
+          <div class="card-body" id="dash-movements" style="padding-top:8px;">
+            <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Loading activity...</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Quick Stats</h3></div>
+          <div class="card-body" id="dash-stats">
+            <div class="info-row"><span class="ir-label">Total Rack Bays</span><span class="ir-value" id="qs-bays">—</span></div>
+            <div class="info-row"><span class="ir-label">Empty Pallets</span><span class="ir-value" id="qs-empty">—</span></div>
+            <div class="info-row"><span class="ir-label">Quarantine Pallets</span><span class="ir-value" id="qs-quarantine">—</span></div>
+            <div class="info-row"><span class="ir-label">Total Allocations</span><span class="ir-value" id="qs-allocs">—</span></div>
+            <div class="info-row"><span class="ir-label">Movements Today</span><span class="ir-value" id="qs-today">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: LOCATIONS -->
+    <div id="page-locations" class="content" style="display:none;">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:18px;">
+        <button class="btn btn-primary" onclick="openModal('modal-add-location')">+ Add Location</button>
+      </div>
+      <div class="g3" id="locations-grid">
+        <div style="color:var(--muted);font-size:13px;">Loading locations...</div>
+      </div>
+    </div>
+
+    <!-- PAGE: RACK BAYS -->
+    <div id="page-bays" class="content" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select class="form-select" style="width:200px;" id="bay-location-filter" onchange="loadBays()">
+            <option value="">All Locations</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-bay')">+ Add Bay</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Bay Overview</h3><div style="display:flex;gap:14px;font-size:12px;align-items:center;"><span style="color:var(--navy);">■ Occupied</span><span style="color:var(--muted);">■ Empty</span></div></div>
+        <div class="card-body" id="bays-grid">
+          <div style="color:var(--muted);font-size:13px;">Select a location to view bays.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: PALLETS -->
+    <div id="page-pallets" class="content" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="filterPallets('all')">All</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterPallets('Active')">Active</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterPallets('Empty')">Empty</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterPallets('Quarantine')">Quarantine</button>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-pallet')">+ New Pallet</button>
+      </div>
+      <div class="g3" id="pallets-grid">
+        <div style="color:var(--muted);font-size:13px;">Loading pallets...</div>
+      </div>
+    </div>
+
+    <!-- PAGE: INVENTORY -->
+    <div id="page-inventory" class="content" style="display:none;">
+      <div class="g2" style="align-items:start;">
+        <div class="card">
+          <div class="card-head"><h3>Allocate Stock to Pallet</h3></div>
+          <div class="card-body">
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">Select Pallet</label>
+              <select class="form-select" id="alloc-pallet"></select>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">Select Product</label>
+              <select class="form-select" id="alloc-product"></select>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">Quantity</label>
+              <input class="form-input no-icon" type="number" id="alloc-qty" value="1" min="1">
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">Action</label>
+              <select class="form-select" id="alloc-action">
+                <option value="add">Add to existing qty</option>
+                <option value="set">Set exact qty</option>
+                <option value="remove">Remove from qty</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label">Notes (optional)</label>
+              <input class="form-input no-icon" type="text" id="alloc-notes" placeholder="e.g. Received from supplier">
+            </div>
+            <button class="btn btn-primary" style="width:100%;" onclick="doAllocation()">Confirm Allocation</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Current Allocations</h3></div>
+          <div style="overflow-x:auto;">
+            <table class="tbl" id="alloc-table">
+              <thead><tr><th>Product</th><th>Pallet</th><th>Qty</th><th>Updated</th></tr></thead>
+              <tbody id="alloc-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: PRODUCTS -->
+    <div id="page-products" class="content" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="form-select" style="width:180px;" id="prod-location-filter" onchange="loadProducts()">
+            <option value="">All Locations</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-product')">+ Add Product</button>
+      </div>
+      <div class="g4" id="products-grid">
+        <div style="color:var(--muted);font-size:13px;">Loading products...</div>
+      </div>
+    </div>
+
+    <!-- PAGE: HISTORY -->
+    <div id="page-history" class="content" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="form-select" style="width:160px;" id="hist-action-filter" onchange="loadHistory()">
+            <option value="">All Actions</option>
+            <option>Pick</option><option>Add</option><option>Move</option><option>Adjust</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="exportHistory()">Export CSV</button>
+      </div>
+      <div class="card">
+        <div style="overflow-x:auto;">
+          <table class="tbl">
+            <thead><tr><th>Date</th><th>Action</th><th>Product</th><th>Pallet</th><th>Change</th><th>Before</th><th>After</th><th>Staff</th></tr></thead>
+            <tbody id="history-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Loading history...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: QUICK PICK (Mobile) -->
+    <div id="page-quickpick" class="content" style="display:none;padding:0;background:var(--bg);">
+      <div class="mobile-wrap">
+        <div class="mobile-head">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:white;">INVO</div>
+            <div id="qp-location" style="font-size:11px;background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:20px;color:white;"></div>
+          </div>
+          <div class="mobile-head-title">⚡ Quick Pick</div>
+          <div class="mobile-head-sub">Pick stock from a pallet</div>
+        </div>
+        <div class="mobile-body">
+          <div class="m-card">
+            <div class="m-card-label">Step 1 — Select Pallet</div>
+            <select class="form-select" id="qp-pallet" onchange="loadQpProducts()">
+              <option value="">Choose pallet...</option>
+            </select>
+          </div>
+          <div class="m-card">
+            <div class="m-card-label">Step 2 — Select Product</div>
+            <select class="form-select" id="qp-product" onchange="updateQpSummary()">
+              <option value="">Choose product...</option>
+            </select>
+            <div id="qp-product-info" style="margin-top:8px;background:var(--bg);border-radius:8px;padding:10px;display:none;">
+              <div style="font-weight:700;font-size:13px;color:var(--navy);" id="qp-prod-name">—</div>
+              <div style="font-size:11px;color:var(--muted);">On this pallet: <strong id="qp-available">0</strong> units available</div>
+            </div>
+          </div>
+          <div class="m-card">
+            <div class="m-card-label">Step 3 — Quantity to Remove</div>
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="changeQpQty(-1)">−</button>
+              <div class="qty-num" id="qp-qty">1</div>
+              <button class="qty-btn" onclick="changeQpQty(1)">+</button>
+            </div>
+            <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;" id="qp-remaining"></div>
+          </div>
+          <div class="m-card" id="qp-summary" style="background:#f0fff8;border-color:#a8e6c8;display:none;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Summary</div>
+            <div style="font-size:13px;font-weight:600;" id="qp-summary-text">—</div>
+          </div>
+          <button class="confirm-btn" onclick="doQuickPick()">✓ CONFIRM PICK</button>
+          <button class="cancel-btn" onclick="resetQuickPick()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /screen-app -->
+
+<!-- ================================================================
+     MODALS
+     ================================================================ -->
+<!-- Add Location -->
+<div class="modal-overlay" id="modal-add-location">
+  <div class="modal">
+    <h2>Add New Location</h2>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Location Name *</label><input class="form-input no-icon" id="loc-name" placeholder="e.g. 2 Mill Road"></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Address</label><input class="form-input no-icon" id="loc-address" placeholder="Full address"></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Notes</label><input class="form-input no-icon" id="loc-notes" placeholder="Optional notes"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-add-location')">Cancel</button><button class="btn btn-primary" onclick="addLocation()">Create Location</button></div>
+  </div>
+</div>
+
+<!-- Add Bay -->
+<div class="modal-overlay" id="modal-add-bay">
+  <div class="modal">
+    <h2>Add Rack Bay</h2>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Bay Code *</label><input class="form-input no-icon" id="bay-code" placeholder="e.g. A1, B3"></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Location *</label><select class="form-select" id="bay-location-select"></select></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Row Label</label><input class="form-input no-icon" id="bay-row" placeholder="e.g. A, Row 1"></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Max Pallets</label><input class="form-input no-icon" type="number" id="bay-max" value="1" min="1"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-add-bay')">Cancel</button><button class="btn btn-primary" onclick="addBay()">Create Bay</button></div>
+  </div>
+</div>
+
+<!-- Add Pallet -->
+<div class="modal-overlay" id="modal-add-pallet">
+  <div class="modal">
+    <h2>New Pallet</h2>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Pallet Code *</label><input class="form-input no-icon" id="pallet-code" placeholder="e.g. PLT-0001"></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Location *</label><select class="form-select" id="pallet-location-select" onchange="loadBaysForPallet()"></select></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Rack Bay</label><select class="form-select" id="pallet-bay-select"><option value="">No bay assigned</option></select></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Status</label><select class="form-select" id="pallet-status"><option>Active</option><option>Empty</option><option>In Transit</option><option>Quarantine</option></select></div>
+    <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Notes</label><input class="form-input no-icon" id="pallet-notes" placeholder="Optional"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-add-pallet')">Cancel</button><button class="btn btn-primary" onclick="addPallet()">Create Pallet</button></div>
+  </div>
+</div>
+
+<!-- Add Product -->
+<div class="modal-overlay" id="modal-add-product">
+  <div class="modal">
+    <h2>Add Product</h2>
+    <div class="g2" style="gap:12px;margin-bottom:12px;">
+      <div><label class="form-label">Product Name *</label><input class="form-input no-icon" id="prod-name" placeholder="Product name"></div>
+      <div><label class="form-label">SKU *</label><input class="form-input no-icon" id="prod-sku" placeholder="e.g. WPM-001"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Description</label><input class="form-input no-icon" id="prod-desc" placeholder="Optional description"></div>
+    <div class="g2" style="gap:12px;margin-bottom:12px;">
+      <div><label class="form-label">Cost Price ($)</label><input class="form-input no-icon" type="number" id="prod-cost" value="0" step="0.01"></div>
+      <div><label class="form-label">Sell Price ($)</label><input class="form-input no-icon" type="number" id="prod-sell" value="0" step="0.01"></div>
+    </div>
+    <div class="g2" style="gap:12px;margin-bottom:12px;">
+      <div><label class="form-label">Weight (kg)</label><input class="form-input no-icon" type="number" id="prod-weight" value="0" step="0.001"></div>
+      <div><label class="form-label">Units per Box</label><input class="form-input no-icon" type="number" id="prod-units" value="1"></div>
+    </div>
+    <div class="g2" style="gap:12px;margin-bottom:12px;">
+      <div><label class="form-label">Category</label><input class="form-input no-icon" id="prod-category" placeholder="e.g. Electronics"></div>
+      <div><label class="form-label">Barcode</label><input class="form-input no-icon" id="prod-barcode" placeholder="Optional"></div>
+    </div>
+    <div class="g2" style="gap:12px;margin-bottom:12px;">
+      <div><label class="form-label">Location *</label><select class="form-select" id="prod-location-select"></select></div>
+      <div><label class="form-label">Min Stock Level</label><input class="form-input no-icon" type="number" id="prod-min" value="0"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-add-product')">Cancel</button><button class="btn btn-primary" onclick="addProduct()">Add Product</button></div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// SUPABASE
+// ================================================================
+const SUPA_URL = 'https://axxesassycfkkprhiejf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4eGVzYXNzeWNma2twcmhpZWpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0ODM2MTEsImV4cCI6MjA5MDA1OTYxMX0.uwavOObzupAkPNsLuy7Vy40yLWqvRfxcdlM4dVyZZjE';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+let allLocations = [];
+let allPallets = [];
+let allProducts = [];
+let qpQty = 1;
+let qpAvailable = 0;
+
+// ================================================================
+// INIT
+// ================================================================
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    showScreen('login');
+    return;
+  }
+  currentUser = session.user;
+  await loadProfile();
+  showScreen('app');
+  showPage('dashboard');
+  await loadGlobalData();
+}
+
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (data) {
+    currentProfile = data;
+    document.getElementById('nav-name').textContent = data.full_name || currentUser.email;
+    document.getElementById('nav-role').textContent = data.role || 'Staff';
+    document.getElementById('nav-avatar').textContent = (data.full_name || 'U').charAt(0).toUpperCase();
+  }
+}
+
+async function loadGlobalData() {
+  const [locsRes, palletsRes, prodsRes] = await Promise.all([
+    sb.from('locations').select('*').eq('is_active', true).order('name'),
+    sb.from('pallets').select('*, rack_bays(bay_code), locations(name)').order('pallet_code'),
+    sb.from('products').select('*').eq('is_active', true).order('name')
+  ]);
+  allLocations = locsRes.data || [];
+  allPallets = palletsRes.data || [];
+  allProducts = prodsRes.data || [];
+
+  // Populate location selects
+  populateLocationSelects();
+  loadDashboard();
+}
+
+function populateLocationSelects() {
+  const selects = ['bay-location-filter','bay-location-select','pallet-location-select','prod-location-filter','prod-location-select'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hasAll = id.includes('filter');
+    el.innerHTML = hasAll ? '<option value="">All Locations</option>' : '<option value="">Select location...</option>';
+    allLocations.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id; opt.textContent = l.name;
+      el.appendChild(opt);
+    });
+  });
+  if (allLocations.length > 0) {
+    document.getElementById('nav-location').innerHTML = allLocations[0].name + ' <span>▾</span>';
+    const qpLoc = document.getElementById('qp-location');
+    if (qpLoc) qpLoc.textContent = '📍 ' + allLocations[0].name;
+  }
+  populatePalletSelects();
+  populateProductSelects();
+}
+
+function populatePalletSelects() {
+  ['alloc-pallet','qp-pallet'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">Select pallet...</option>';
+    allPallets.filter(p => p.status === 'Active' || p.status === 'Empty').forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.pallet_code + (p.rack_bays ? ' — Bay ' + p.rack_bays.bay_code : '');
+      el.appendChild(opt);
+    });
+  });
+}
+
+function populateProductSelects() {
+  const el = document.getElementById('alloc-product');
+  if (!el) return;
+  el.innerHTML = '<option value="">Select product...</option>';
+  allProducts.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name + ' (' + p.sku + ')';
+    el.appendChild(opt);
+  });
+}
+
+// ================================================================
+// DASHBOARD
+// ================================================================
+async function loadDashboard() {
+  // Stats
+  document.getElementById('stat-products').textContent = allProducts.length;
+  document.getElementById('stat-pallets').textContent = allPallets.filter(p => p.status === 'Active').length;
+  document.getElementById('stat-locations').textContent = allLocations.length;
+
+  // Quick stats
+  const [baysRes, allocsRes, movesTodayRes, alertsRes] = await Promise.all([
+    sb.from('rack_bays').select('id', { count: 'exact' }),
+    sb.from('inventory_allocations').select('id', { count: 'exact' }),
+    sb.from('stock_movements').select('id', { count: 'exact' }).gte('created_at', new Date().toISOString().split('T')[0]),
+    sb.from('alerts').select('id', { count: 'exact' }).eq('is_resolved', false)
+  ]);
+
+  document.getElementById('qs-bays').textContent = baysRes.count || 0;
+  document.getElementById('qs-empty').textContent = allPallets.filter(p => p.status === 'Empty').length;
+  document.getElementById('qs-quarantine').textContent = allPallets.filter(p => p.status === 'Quarantine').length;
+  document.getElementById('qs-allocs').textContent = allocsRes.count || 0;
+  document.getElementById('qs-today').textContent = movesTodayRes.count || 0;
+  document.getElementById('stat-alerts').textContent = alertsRes.count || 0;
+
+  if ((alertsRes.count || 0) > 0) {
+    document.getElementById('alert-banner').style.display = 'flex';
+    document.getElementById('alert-text').textContent = `${alertsRes.count} product(s) are below minimum stock level.`;
+  }
+
+  // Recent movements
+  const { data: moves } = await sb.from('stock_movements')
+    .select('*, products(name), pallets(pallet_code), profiles(full_name)')
+    .order('created_at', { ascending: false }).limit(6);
+
+  const movesEl = document.getElementById('dash-movements');
+  if (!moves || moves.length === 0) {
+    movesEl.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No movements yet. Start picking or allocating stock.</div>';
+    return;
+  }
+  movesEl.innerHTML = moves.map(m => `
+    <div class="act-item">
+      <div class="act-dot ${m.action_type === 'Pick' ? 'pick' : m.action_type === 'Add' ? 'add' : 'move'}"></div>
+      <div>
+        <div class="act-title">${m.action_type}: <strong>${m.products?.name || '—'}</strong> on ${m.pallets?.pallet_code || '—'}</div>
+        <div class="act-meta">${m.profiles?.full_name || 'Unknown'} · ${formatDate(m.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ================================================================
+// LOCATIONS
+// ================================================================
+async function loadLocations() {
+  const { data } = await sb.from('locations').select('*').order('name');
+  const grid = document.getElementById('locations-grid');
+  if (!data || data.length === 0) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:13px;">No locations yet. Add your first warehouse location.</div>`;
+    return;
+  }
+  grid.innerHTML = data.map((l, i) => {
+    const colors = ['var(--navy)','var(--violet)','var(--emerald)'];
+    return `
+    <div class="card" style="border-top:4px solid ${colors[i % colors.length]};">
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--navy);">${l.name}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${l.address || 'No address'}</div></div>
+          <span class="badge ${l.is_active ? 'badge-green' : 'badge-grey'}">${l.is_active ? 'Active' : 'Inactive'}</span>
+        </div>
+        <div class="divider"></div>
+        ${l.notes ? `<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${l.notes}</div>` : ''}
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" onclick="setActiveLocation('${l.id}','${l.name}')">Set Active</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + `
+    <div class="card" style="border:2px dashed var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:180px;" onclick="openModal('modal-add-location')">
+      <div style="text-align:center;color:var(--muted);"><div style="font-size:28px;margin-bottom:6px;">+</div><div style="font-size:13px;font-weight:600;">Add Location</div></div>
+    </div>`;
+}
+
+async function addLocation() {
+  const name = document.getElementById('loc-name').value.trim();
+  if (!name) return showToast('Location name is required', 'error');
+  const { error } = await sb.from('locations').insert({ name, address: document.getElementById('loc-address').value, notes: document.getElementById('loc-notes').value, created_by: currentUser.id });
+  if (error) return showToast('Error: ' + error.message, 'error');
+  closeModal('modal-add-location');
+  showToast('Location created!', 'success');
+  await loadGlobalData();
+  loadLocations();
+}
+
+function setActiveLocation(id, name) {
+  document.getElementById('nav-location').innerHTML = name + ' <span>▾</span>';
+  const qpLoc = document.getElementById('qp-location');
+  if (qpLoc) qpLoc.textContent = '📍 ' + name;
+  showToast('Switched to ' + name, 'success');
+}
+
+// ================================================================
+// RACK BAYS
+// ================================================================
+async function loadBays() {
+  const locId = document.getElementById('bay-location-filter').value;
+  let query = sb.from('rack_bays').select('*, locations(name), pallets(id,pallet_code,status)').order('bay_code');
+  if (locId) query = query.eq('location_id', locId);
+  const { data } = await query;
+  const grid = document.getElementById('bays-grid');
+  if (!data || data.length === 0) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">No bays found. Add bays to get started.</div>'; return; }
+
+  const rows = {};
+  data.forEach(b => {
+    const row = b.row_label || b.bay_code.charAt(0) || 'Bay';
+    if (!rows[row]) rows[row] = [];
+    rows[row].push(b);
+  });
+
+  grid.innerHTML = Object.entries(rows).map(([row, bays]) => `
+    <div class="bay-row">
+      <div class="bay-row-label">Row ${row}</div>
+      <div class="bay-cells">
+        ${bays.map(b => {
+          const hasPallet = b.pallets && b.pallets.length > 0;
+          const cls = hasPallet ? 'occupied' : 'empty';
+          const palletCode = hasPallet ? b.pallets[0].pallet_code : '—';
+          return `<div class="bay-cell ${cls}">${b.bay_code}<div class="bay-pallet">${palletCode}</div></div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+async function addBay() {
+  const code = document.getElementById('bay-code').value.trim();
+  const locId = document.getElementById('bay-location-select').value;
+  if (!code || !locId) return showToast('Bay code and location are required', 'error');
+  const { error } = await sb.from('rack_bays').insert({ bay_code: code, location_id: locId, row_label: document.getElementById('bay-row').value, max_pallets: parseInt(document.getElementById('bay-max').value) || 1 });
+  if (error) return showToast('Error: ' + error.message, 'error');
+  closeModal('modal-add-bay');
+  showToast('Bay created!', 'success');
+  loadBays();
+}
+
+// ================================================================
+// PALLETS
+// ================================================================
+async function loadPallets(statusFilter) {
+  let query = sb.from('pallets').select('*, rack_bays(bay_code), locations(name), inventory_allocations(id,qty)').order('pallet_code');
+  if (statusFilter && statusFilter !== 'all') query = query.eq('status', statusFilter);
+  const { data } = await query;
+  allPallets = data || [];
+  populatePalletSelects();
+  renderPallets(data || []);
+}
+
+function renderPallets(pallets) {
+  const grid = document.getElementById('pallets-grid');
+  if (!pallets.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">No pallets found.</div>'; return; }
+  grid.innerHTML = pallets.map(p => {
+    const skuCount = p.inventory_allocations ? p.inventory_allocations.length : 0;
+    const totalUnits = p.inventory_allocations ? p.inventory_allocations.reduce((s, a) => s + a.qty, 0) : 0;
+    const badgeClass = { Active:'badge-green', Empty:'badge-grey', Quarantine:'badge-red', 'In Transit':'badge-amber' }[p.status] || 'badge-grey';
+    return `
+    <div class="pallet-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div><div class="pc-code">${p.pallet_code}</div><div class="pc-bay">Bay ${p.rack_bays?.bay_code || 'Unassigned'} · ${p.locations?.name || '—'}</div></div>
+        <span class="badge ${badgeClass}">${p.status}</span>
+      </div>
+      <div class="pc-stats">
+        <div><div class="pc-stat-val">${skuCount}</div><div class="pc-stat-lbl">SKUs</div></div>
+        <div><div class="pc-stat-val">${totalUnits}</div><div class="pc-stat-lbl">Units</div></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="showPage('inventory')">Allocate</button>
+        <button class="btn btn-secondary btn-sm" onclick="movePallet('${p.id}','${p.pallet_code}')">Move</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterPallets(status) { loadPallets(status); }
+
+async function loadBaysForPallet() {
+  const locId = document.getElementById('pallet-location-select').value;
+  const select = document.getElementById('pallet-bay-select');
+  select.innerHTML = '<option value="">No bay assigned</option>';
+  if (!locId) return;
+  const { data } = await sb.from('rack_bays').select('*').eq('location_id', locId).eq('is_active', true).order('bay_code');
+  (data || []).forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id; opt.textContent = b.bay_code;
+    select.appendChild(opt);
+  });
+}
+
+async function addPallet() {
+  const code = document.getElementById('pallet-code').value.trim();
+  const locId = document.getElementById('pallet-location-select').value;
+  if (!code || !locId) return showToast('Pallet code and location are required', 'error');
+  const bayId = document.getElementById('pallet-bay-select').value || null;
+  const { error } = await sb.from('pallets').insert({ pallet_code: code, location_id: locId, rack_bay_id: bayId, status: document.getElementById('pallet-status').value, notes: document.getElementById('pallet-notes').value, created_by: currentUser.id });
+  if (error) { if (error.code === '23505') return showToast('Pallet code already exists', 'error'); return showToast('Error: ' + error.message, 'error'); }
+  closeModal('modal-add-pallet');
+  showToast('Pallet created!', 'success');
+  await loadGlobalData();
+  loadPallets('all');
+}
+
+async function movePallet(palletId, palletCode) {
+  if (allLocations.length === 0) return showToast('No locations available', 'error');
+  const locName = allLocations.map((l, i) => `${i+1}. ${l.name}`).join('\n');
+  const choice = prompt(`Move ${palletCode} to which location?\n\n${locName}\n\nEnter number:`);
+  if (!choice) return;
+  const loc = allLocations[parseInt(choice) - 1];
+  if (!loc) return showToast('Invalid selection', 'error');
+  const { data: bays } = await sb.from('rack_bays').select('*').eq('location_id', loc.id).order('bay_code');
+  if (!bays || bays.length === 0) return showToast('No bays in that location', 'error');
+  const bayList = bays.map((b, i) => `${i+1}. ${b.bay_code}`).join('\n');
+  const bayChoice = prompt(`Select bay in ${loc.name}:\n\n${bayList}\n\nEnter number:`);
+  if (!bayChoice) return;
+  const bay = bays[parseInt(bayChoice) - 1];
+  if (!bay) return showToast('Invalid bay', 'error');
+  await sb.from('pallets').update({ rack_bay_id: bay.id, location_id: loc.id, last_moved_at: new Date().toISOString() }).eq('id', palletId);
+  await sb.from('stock_movements').insert({ pallet_id: palletId, location_id: loc.id, action_type: 'Move', qty_change: 0, qty_before: 0, qty_after: 0, performed_by: currentUser.id, notes: `Moved to ${loc.name} Bay ${bay.bay_code}` });
+  showToast(`${palletCode} moved to ${loc.name} — Bay ${bay.bay_code}`, 'success');
+  loadPallets('all');
+}
+
+// ================================================================
+// INVENTORY ALLOCATION
+// ================================================================
+async function loadAllocations() {
+  const { data } = await sb.from('inventory_allocations').select('*, products(name,sku), pallets(pallet_code), profiles(full_name)').order('updated_at', { ascending: false }).limit(50);
+  const tbody = document.getElementById('alloc-tbody');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">No allocations yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(a => `
+    <tr>
+      <td class="bold">${a.products?.name || '—'}<div class="muted">${a.products?.sku || ''}</div></td>
+      <td>${a.pallets?.pallet_code || '—'}</td>
+      <td><span class="bold">${a.qty}</span></td>
+      <td class="muted">${formatDate(a.updated_at)}</td>
+    </tr>`).join('');
+}
+
+async function doAllocation() {
+  const palletId = document.getElementById('alloc-pallet').value;
+  const productId = document.getElementById('alloc-product').value;
+  const qty = parseInt(document.getElementById('alloc-qty').value);
+  const action = document.getElementById('alloc-action').value;
+  const notes = document.getElementById('alloc-notes').value;
+  if (!palletId || !productId || !qty) return showToast('Please fill all required fields', 'error');
+
+  const pallet = allPallets.find(p => p.id === palletId);
+  const { data: existing } = await sb.from('inventory_allocations').select('*').eq('product_id', productId).eq('pallet_id', palletId).single();
+
+  let newQty, oldQty = existing?.qty || 0;
+  if (action === 'add') newQty = oldQty + qty;
+  else if (action === 'set') newQty = qty;
+  else newQty = Math.max(0, oldQty - qty);
+
+  if (existing) {
+    await sb.from('inventory_allocations').update({ qty: newQty, last_updated_by: currentUser.id, updated_at: new Date().toISOString() }).eq('id', existing.id);
+  } else {
+    await sb.from('inventory_allocations').insert({ product_id: productId, pallet_id: palletId, location_id: pallet?.location_id, qty: newQty, last_updated_by: currentUser.id });
+  }
+
+  await sb.from('stock_movements').insert({ product_id: productId, pallet_id: palletId, location_id: pallet?.location_id, action_type: action === 'remove' ? 'Pick' : 'Add', qty_change: action === 'remove' ? -qty : qty, qty_before: oldQty, qty_after: newQty, performed_by: currentUser.id, notes: notes || null });
+
+  showToast('Allocation saved!', 'success');
+  document.getElementById('alloc-qty').value = 1;
+  document.getElementById('alloc-notes').value = '';
+  loadAllocations();
+}
+
+// ================================================================
+// PRODUCTS
+// ================================================================
+async function loadProducts() {
+  const locId = document.getElementById('prod-location-filter').value;
+  let query = sb.from('products').select('*, inventory_allocations(qty)').order('name');
+  if (locId) query = query.eq('location_id', locId);
+  const { data } = await query;
+  allProducts = data || [];
+  populateProductSelects();
+  const grid = document.getElementById('products-grid');
+  const emojis = ['📦','🗃','🔧','📮','🎁','🛠','📱','💡'];
+  if (!data || data.length === 0) {
+    grid.innerHTML = `
+      <div class="prod-card" style="border:2px dashed var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:180px;" onclick="openModal('modal-add-product')">
+        <div style="text-align:center;color:var(--muted);"><div style="font-size:28px;margin-bottom:6px;">+</div><div style="font-size:13px;font-weight:600;">Add First Product</div></div>
+      </div>`;
+    return;
+  }
+  const totalStock = p => (p.inventory_allocations || []).reduce((s, a) => s + a.qty, 0);
+  grid.innerHTML = data.map((p, i) => {
+    const stock = totalStock(p);
+    const isLow = p.min_stock_level > 0 && stock <= p.min_stock_level;
+    const badgeClass = isLow ? (stock === 0 ? 'badge-red' : 'badge-amber') : 'badge-green';
+    const badgeText = isLow ? (stock === 0 ? 'Out of Stock' : 'Low Stock') : 'In Stock';
+    return `
+    <div class="prod-card">
+      <div class="prod-img">${emojis[i % emojis.length]}</div>
+      <div class="prod-info">
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-sku">SKU: ${p.sku}</div>
+        <div class="prod-bottom">
+          <div><div class="prod-qty" style="${isLow?'color:var(--red)':''}">${stock}</div><div style="font-size:10px;color:var(--muted);">units</div></div>
+          <span class="badge ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="prod-price">Cost: $${p.cost_price} · Sell: $${p.sell_price}</div>
+      </div>
+    </div>`;
+  }).join('') + `
+    <div class="prod-card" style="border:2px dashed var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:180px;" onclick="openModal('modal-add-product')">
+      <div style="text-align:center;color:var(--muted);"><div style="font-size:28px;margin-bottom:6px;">+</div><div style="font-size:13px;font-weight:600;">Add Product</div></div>
+    </div>`;
+}
+
+async function addProduct() {
+  const name = document.getElementById('prod-name').value.trim();
+  const sku = document.getElementById('prod-sku').value.trim();
+  const locId = document.getElementById('prod-location-select').value;
+  if (!name || !sku || !locId) return showToast('Name, SKU and location are required', 'error');
+  const { error } = await sb.from('products').insert({ name, sku, description: document.getElementById('prod-desc').value, cost_price: parseFloat(document.getElementById('prod-cost').value) || 0, sell_price: parseFloat(document.getElementById('prod-sell').value) || 0, weight_kg: parseFloat(document.getElementById('prod-weight').value) || 0, units_per_box: parseInt(document.getElementById('prod-units').value) || 1, category: document.getElementById('prod-category').value, barcode: document.getElementById('prod-barcode').value, location_id: locId, min_stock_level: parseInt(document.getElementById('prod-min').value) || 0, created_by: currentUser.id });
+  if (error) return showToast('Error: ' + error.message, 'error');
+  closeModal('modal-add-product');
+  showToast('Product added!', 'success');
+  loadProducts();
+}
+
+// ================================================================
+// HISTORY
+// ================================================================
+async function loadHistory() {
+  const actionFilter = document.getElementById('hist-action-filter').value;
+  let query = sb.from('stock_movements').select('*, products(name), pallets(pallet_code), profiles(full_name)').order('created_at', { ascending: false }).limit(100);
+  if (actionFilter) query = query.eq('action_type', actionFilter);
+  const { data } = await query;
+  const tbody = document.getElementById('history-tbody');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">No history yet.</td></tr>'; return; }
+  const actionBadge = { Pick:'badge-amber', Add:'badge-green', Move:'badge-violet', Adjust:'badge-blue', Transfer:'badge-grey' };
+  tbody.innerHTML = data.map(m => `
+    <tr>
+      <td class="muted">${formatDate(m.created_at)}</td>
+      <td><span class="badge ${actionBadge[m.action_type]||'badge-grey'}">${m.action_type}</span></td>
+      <td class="bold">${m.products?.name || '—'}</td>
+      <td class="muted">${m.pallets?.pallet_code || '—'}</td>
+      <td class="${m.qty_change >= 0 ? 'qty-up' : 'qty-down'}">${m.qty_change >= 0 ? '+' : ''}${m.qty_change}</td>
+      <td>${m.qty_before}</td>
+      <td>${m.qty_after}</td>
+      <td>${m.profiles?.full_name || '—'}</td>
+    </tr>`).join('');
+}
+
+function exportHistory() {
+  showToast('Export coming soon!', 'success');
+}
+
+// ================================================================
+// QUICK PICK
+// ================================================================
+async function loadQpProducts() {
+  const palletId = document.getElementById('qp-pallet').value;
+  const select = document.getElementById('qp-product');
+  select.innerHTML = '<option value="">Choose product...</option>';
+  document.getElementById('qp-product-info').style.display = 'none';
+  document.getElementById('qp-summary').style.display = 'none';
+  if (!palletId) return;
+  const { data } = await sb.from('inventory_allocations').select('*, products(id,name,sku)').eq('pallet_id', palletId).gt('qty', 0);
+  (data || []).forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.dataset.qty = a.qty;
+    opt.dataset.name = a.products?.name;
+    opt.textContent = `${a.products?.name} (${a.qty} available)`;
+    select.appendChild(opt);
+  });
+}
+
+function updateQpSummary() {
+  const select = document.getElementById('qp-product');
+  const opt = select.options[select.selectedIndex];
+  if (!opt || !opt.dataset.qty) { document.getElementById('qp-product-info').style.display = 'none'; return; }
+  qpAvailable = parseInt(opt.dataset.qty);
+  qpQty = 1;
+  document.getElementById('qp-qty').textContent = qpQty;
+  document.getElementById('qp-prod-name').textContent = opt.dataset.name;
+  document.getElementById('qp-available').textContent = qpAvailable;
+  document.getElementById('qp-product-info').style.display = 'block';
+  updateQpRemaining();
+}
+
+function changeQpQty(delta) {
+  qpQty = Math.max(1, Math.min(qpAvailable, qpQty + delta));
+  document.getElementById('qp-qty').textContent = qpQty;
+  updateQpRemaining();
+}
+
+function updateQpRemaining() {
+  const remaining = qpAvailable - qpQty;
+  document.getElementById('qp-remaining').textContent = `${qpAvailable} available → will leave ${remaining}`;
+  const palletCode = document.getElementById('qp-pallet').options[document.getElementById('qp-pallet').selectedIndex]?.text || '—';
+  const prodName = document.getElementById('qp-product').options[document.getElementById('qp-product').selectedIndex]?.dataset?.name || '—';
+  document.getElementById('qp-summary-text').textContent = `−${qpQty}x ${prodName} from ${palletCode.split(' —')[0]}`;
+  document.getElementById('qp-summary').style.display = 'block';
+}
+
+async function doQuickPick() {
+  const palletId = document.getElementById('qp-pallet').value;
+  const allocSelect = document.getElementById('qp-product');
+  const allocId = allocSelect.value;
+  if (!palletId || !allocId) return showToast('Please select pallet and product', 'error');
+  if (qpQty > qpAvailable) return showToast('Cannot pick more than available', 'error');
+
+  const opt = allocSelect.options[allocSelect.selectedIndex];
+  const newQty = qpAvailable - qpQty;
+  const pallet = allPallets.find(p => p.id === palletId);
+
+  await sb.from('inventory_allocations').update({ qty: newQty, updated_at: new Date().toISOString(), last_updated_by: currentUser.id }).eq('id', allocId);
+
+  const { data: alloc } = await sb.from('inventory_allocations').select('product_id').eq('id', allocId).single();
+  await sb.from('stock_movements').insert({ product_id: alloc?.product_id, pallet_id: palletId, location_id: pallet?.location_id, action_type: 'Pick', qty_change: -qpQty, qty_before: qpAvailable, qty_after: newQty, performed_by: currentUser.id });
+
+  showToast(`✓ Picked ${qpQty}x ${opt.dataset.name}`, 'success');
+  resetQuickPick();
+  await loadGlobalData();
+}
+
+function resetQuickPick() {
+  document.getElementById('qp-pallet').value = '';
+  document.getElementById('qp-product').innerHTML = '<option value="">Choose product...</option>';
+  document.getElementById('qp-product-info').style.display = 'none';
+  document.getElementById('qp-summary').style.display = 'none';
+  document.getElementById('qp-remaining').textContent = '';
+  qpQty = 1; qpAvailable = 0;
+  document.getElementById('qp-qty').textContent = '1';
+}
+
+// ================================================================
+// LOGIN / LOGOUT
+// ================================================================
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  if (!email || !password) { err.textContent = 'Please enter email and password.'; err.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Signing in...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { err.textContent = 'Incorrect email or password.'; err.style.display = 'block'; btn.disabled = false; btn.innerHTML = 'SIGN IN'; return; }
+  currentUser = data.user;
+  await loadProfile();
+  showScreen('app');
+  showPage('dashboard');
+  await loadGlobalData();
+}
+
+document.getElementById('login-password')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null; currentProfile = null;
+  showScreen('login');
+}
+
+// ================================================================
+// UI HELPERS
+// ================================================================
+function showScreen(name) {
+  document.getElementById('loading').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  if (name === 'login') document.getElementById('screen-login').classList.add('active');
+  else if (name === 'app') document.getElementById('screen-app').classList.add('active');
+}
+
+function showPage(page) {
+  document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.style.display = '';
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+  const titles = { dashboard:'Dashboard', locations:'Locations', bays:'Rack Bays', pallets:'Pallets', inventory:'Inventory Allocation', products:'Products', history:'Stock History', quickpick:'Quick Pick' };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  closeSidebar();
+  if (page === 'locations') loadLocations();
+  else if (page === 'bays') loadBays();
+  else if (page === 'pallets') loadPallets('all');
+  else if (page === 'inventory') loadAllocations();
+  else if (page === 'products') loadProducts();
+  else if (page === 'history') loadHistory();
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay-bg').classList.add('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay-bg').classList.remove('open'); }
+
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+function formatDate(str) {
+  if (!str) return '—';
+  return new Date(str).toLocaleDateString('en-NZ', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+// ================================================================
+// START
+// ================================================================
+init();
+</script>
+</body>
+</html>
