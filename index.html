@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>INVO — Warehouse Management</title>
+<meta name="description" content="INVO Warehouse Management System">
+<meta name="theme-color" content="#0a2444">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="INVO">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<!-- Apple touch icons (inline SVG converted — replace with real logo later) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230a2444'/%3E%3Ctext x='96' y='130' font-family='Arial Black' font-size='100' font-weight='900' fill='white' text-anchor='middle'%3EI%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -111,13 +120,33 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .act-dot.pick { background: var(--amber); } .act-dot.add { background: var(--emerald); } .act-dot.move { background: var(--violet); }
 .qty-up { color: var(--emerald); font-weight: 700; } .qty-down { color: var(--red); font-weight: 700; }
 .alert-bar { background: #fff4e6; border: 1px solid #fcd38d; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-size: 13px; color: #7c4a00; }
-.pallet-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: all 0.15s; }
-.pallet-card:hover { border-color: var(--navy); box-shadow: 0 4px 16px rgba(15,52,96,0.1); }
-.pc-code { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--navy); }
-.pc-bay { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.pc-stats { display: flex; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-.pc-stat-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--navy); }
-.pc-stat-lbl { font-size: 10px; color: var(--muted); }
+.pf-btn { padding:7px 14px; border-radius:20px; border:1.5px solid var(--border); background:white; font-size:12px; font-weight:600; cursor:pointer; color:var(--muted); font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+.pf-btn.active { background:var(--navy); color:white; border-color:var(--navy); }
+.pallet-row { background:white; border-radius:14px; border:1px solid var(--border); margin-bottom:10px; overflow:hidden; transition:box-shadow 0.15s; }
+.pallet-row:hover { box-shadow:0 4px 16px rgba(15,52,96,0.1); }
+.pallet-row-head { padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; }
+.pallet-row-head:active { background:#f8fafc; }
+.pr-code { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; color:var(--navy); }
+.pr-loc { font-size:12px; color:var(--muted); margin-top:1px; }
+.pr-chevron { margin-left:auto; font-size:18px; color:var(--muted); transition:transform 0.2s; flex-shrink:0; }
+.pr-chevron.open { transform:rotate(180deg); }
+.pallet-row-body { display:none; border-top:1px solid var(--border); }
+.pallet-row-body.open { display:block; }
+.pr-section { padding:14px 16px; border-bottom:1px solid var(--border); }
+.pr-section:last-child { border-bottom:none; }
+.pr-section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; }
+.sku-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.sku-row:last-child { border-bottom:none; }
+.sku-img { width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg,#e6f0ff,#f0e6ff); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; overflow:hidden; }
+.sku-img img { width:36px; height:36px; object-fit:cover; }
+.sku-name { font-size:13px; font-weight:600; color:var(--navy); }
+.sku-meta { font-size:11px; color:var(--muted); }
+.sku-qty { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--navy); margin-left:auto; flex-shrink:0; }
+.inline-assign { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.inline-assign select { flex:1; min-width:120px; font-size:13px; padding:9px 12px; }
+.pr-stat { text-align:center; }
+.pr-stat-val { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; color:var(--navy); }
+.pr-stat-lbl { font-size:10px; color:var(--muted); margin-top:2px; }
 .bay-row { margin-bottom: 16px; }
 .bay-row-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
 .bay-cells { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -226,6 +255,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div><div class="u-name" id="nav-name">Loading...</div><div class="u-role" id="nav-role">—</div></div>
       </div>
       <button class="logout-btn" onclick="doLogout()">Sign out</button>
+      <button id="install-btn" onclick="installApp()" style="display:none;width:100%;margin-top:6px;padding:7px;background:linear-gradient(135deg,var(--violet),#7c3aed);border:none;color:white;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">📲 Install App</button>
     </div>
   </nav>
 
@@ -281,17 +311,25 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     </div>
 
     <!-- PALLETS -->
-    <div id="page-pallets" class="content" style="display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-primary btn-sm" onclick="loadPallets('all')">All</button>
-          <button class="btn btn-secondary btn-sm" onclick="loadPallets('Active')">Active</button>
-          <button class="btn btn-secondary btn-sm" onclick="loadPallets('Empty')">Empty</button>
-          <button class="btn btn-secondary btn-sm" onclick="loadPallets('Quarantine')">Quarantine</button>
+    <div id="page-pallets" class="content" style="display:none;padding:0;">
+      <!-- Sticky filter bar -->
+      <div style="position:sticky;top:58px;z-index:40;background:var(--bg);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="pf-btn active" id="pf-all" onclick="filterPalletsBtn(this,'all')">All</button>
+          <button class="pf-btn" id="pf-active" onclick="filterPalletsBtn(this,'Active')">Active</button>
+          <button class="pf-btn" id="pf-empty" onclick="filterPalletsBtn(this,'Empty')">Empty</button>
+          <button class="pf-btn" id="pf-quarantine" onclick="filterPalletsBtn(this,'Quarantine')">⚠ QTN</button>
         </div>
-        <button class="btn btn-primary" onclick="openAddModal('pallet')">+ New Pallet</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal('pallet')">+ New</button>
       </div>
-      <div class="g3" id="pallets-grid"></div>
+      <!-- Location filter -->
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:white;">
+        <select class="form-select" id="pallets-loc-filter" onchange="loadPallets(currentPalletFilter)" style="font-size:13px;">
+          <option value="">All Locations</option>
+        </select>
+      </div>
+      <!-- Pallet list -->
+      <div id="pallets-grid" style="padding:12px 16px;"></div>
     </div>
 
     <!-- INVENTORY -->
@@ -531,7 +569,7 @@ async function refreshGlobal() {
 }
 
 function fillLocSelects() {
-  ['bay-location-filter','bay-loc-sel','pallet-loc-sel','prod-location-filter','prod-loc-sel'].forEach(id => {
+  ['bay-location-filter','bay-loc-sel','pallet-loc-sel','prod-location-filter','prod-loc-sel','pallets-loc-filter'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     const all = id.includes('filter');
     el.innerHTML = all ? '<option value="">All Locations</option>' : '<option value="">Select location...</option>';
@@ -654,29 +692,204 @@ async function deleteBay() {
 }
 
 // PALLETS
+let currentPalletFilter = 'all';
+
+function filterPalletsBtn(btn, filter) {
+  document.querySelectorAll('.pf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentPalletFilter = filter;
+  loadPallets(filter);
+}
+
 async function loadPallets(sf) {
-  let q = sb.from('pallets').select('*, rack_bays(bay_code), locations(name), inventory_allocations(id,qty)').order('pallet_code');
-  if (sf && sf!=='all') q = q.eq('status',sf);
+  currentPalletFilter = sf || 'all';
+  const locFilter = v('pallets-loc-filter');
+
+  // Populate location filter if empty
+  const locSel = document.getElementById('pallets-loc-filter');
+  if (locSel && locSel.options.length <= 1) {
+    LOCS.forEach(l => { if (!locSel.querySelector(`option[value="${l.id}"]`)) locSel.add(new Option(l.name, l.id)); });
+  }
+
+  let q = sb.from('pallets')
+    .select('*, rack_bays(id,bay_code), locations(id,name), inventory_allocations(id,qty,products(id,name,sku,image_url))')
+    .order('pallet_code');
+  if (sf && sf !== 'all') q = q.eq('status', sf);
+  if (locFilter) q = q.eq('location_id', locFilter);
+
   const { data } = await q;
-  PALLETS = data||[]; fillPalletSelects();
+  PALLETS = (data || []).map(p => ({ ...p, rack_bays: p.rack_bays, locations: p.locations }));
+  fillPalletSelects();
+
   const grid = document.getElementById('pallets-grid');
-  if (!data||!data.length) { grid.innerHTML='<div style="color:var(--muted);">No pallets found.</div>'; return; }
+  if (!data || !data.length) {
+    grid.innerHTML = `<div style="text-align:center;padding:48px 24px;color:var(--muted);">
+      <div style="font-size:40px;margin-bottom:12px;">🟦</div>
+      <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px;">No pallets found</div>
+      <div style="font-size:13px;">Try a different filter or add a new pallet.</div>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="openAddModal('pallet')">+ Add Pallet</button>
+    </div>`;
+    return;
+  }
+
   const bc = { Active:'badge-green', Empty:'badge-grey', Quarantine:'badge-red', 'In Transit':'badge-amber' };
+  const statusDot = { Active:'var(--emerald)', Empty:'var(--muted)', Quarantine:'var(--red)', 'In Transit':'var(--amber)' };
+
   grid.innerHTML = data.map(p => {
-    const skus = p.inventory_allocations?.length||0;
-    const units = p.inventory_allocations?.reduce((s,a)=>s+a.qty,0)||0;
-    return `<div class="pallet-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div><div class="pc-code">${p.pallet_code}</div><div class="pc-bay">Bay ${p.rack_bays?.bay_code||'Unassigned'} · ${p.locations?.name||'—'}</div></div>
-        <span class="badge ${bc[p.status]||'badge-grey'}">${p.status}</span>
+    const allocs = p.inventory_allocations || [];
+    const totalUnits = allocs.reduce((s, a) => s + a.qty, 0);
+    const skuCount = allocs.length;
+    const bay = p.rack_bays?.bay_code || null;
+    const locName = p.locations?.name || '—';
+    const locId = p.locations?.id || '';
+
+    const skuRows = allocs.length ? allocs.map(a => {
+      const prod = a.products;
+      const imgHtml = prod?.image_url
+        ? `<img src="${prod.image_url}">`
+        : '📦';
+      return `<div class="sku-row">
+        <div class="sku-img">${imgHtml}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="sku-name">${prod?.name || '—'}</div>
+          <div class="sku-meta">SKU: ${prod?.sku || '—'}</div>
+        </div>
+        <div class="sku-qty">${a.qty}</div>
+      </div>`;
+    }).join('') : `<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0;">No stock allocated yet</div>`;
+
+    return `
+    <div class="pallet-row" id="pr-${p.id}">
+      <!-- HEAD -->
+      <div class="pallet-row-head" onclick="togglePalletRow('${p.id}')">
+        <div style="width:10px;height:10px;border-radius:50%;background:${statusDot[p.status]||'var(--muted)'};flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div class="pr-code">${p.pallet_code}</div>
+          <div class="pr-loc">${bay ? 'Bay ' + bay : 'No bay'} · ${locName}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge ${bc[p.status]||'badge-grey'}">${p.status}</span>
+          <div style="text-align:right;margin-right:4px;">
+            <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--navy);">${totalUnits}</div>
+            <div style="font-size:10px;color:var(--muted);">${skuCount} SKU${skuCount!==1?'s':''}</div>
+          </div>
+          <div class="pr-chevron" id="pr-chev-${p.id}">▾</div>
+        </div>
       </div>
-      <div class="pc-stats"><div><div class="pc-stat-val">${skus}</div><div class="pc-stat-lbl">SKUs</div></div><div><div class="pc-stat-val">${units}</div><div class="pc-stat-lbl">Units</div></div></div>
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-secondary btn-sm" onclick='openEditModal("pallet",${JSON.stringify(p)})'>✏ Edit</button>
-        <button class="btn btn-primary btn-sm" onclick="showPage('inventory')">Allocate</button>
+
+      <!-- BODY -->
+      <div class="pallet-row-body" id="pr-body-${p.id}">
+
+        <!-- STATS ROW -->
+        <div class="pr-section" style="display:flex;gap:0;">
+          <div class="pr-stat" style="flex:1;border-right:1px solid var(--border);">
+            <div class="pr-stat-val">${skuCount}</div>
+            <div class="pr-stat-lbl">SKUs</div>
+          </div>
+          <div class="pr-stat" style="flex:1;border-right:1px solid var(--border);">
+            <div class="pr-stat-val">${totalUnits}</div>
+            <div class="pr-stat-lbl">Total Units</div>
+          </div>
+          <div class="pr-stat" style="flex:1;">
+            <div class="pr-stat-val" style="font-size:14px;">${p.status}</div>
+            <div class="pr-stat-lbl">Status</div>
+          </div>
+        </div>
+
+        <!-- ASSIGN LOCATION & BAY -->
+        <div class="pr-section">
+          <div class="pr-section-title">📍 Location & Bay Assignment</div>
+          <div class="inline-assign">
+            <select class="form-select" id="pr-loc-${p.id}" onchange="prLoadBays('${p.id}')" style="flex:1;">
+              <option value="">Select location...</option>
+              ${LOCS.map(l => `<option value="${l.id}" ${l.id===locId?'selected':''}>${l.name}</option>`).join('')}
+            </select>
+            <select class="form-select" id="pr-bay-${p.id}" style="flex:1;">
+              <option value="">Loading bays...</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <select class="form-select" id="pr-status-${p.id}" style="flex:1;font-size:13px;">
+              <option ${p.status==='Active'?'selected':''}>Active</option>
+              <option ${p.status==='Empty'?'selected':''}>Empty</option>
+              <option ${p.status==='In Transit'?'selected':''}>In Transit</option>
+              <option ${p.status==='Quarantine'?'selected':''}>Quarantine</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="saveInlinePallet('${p.id}')">Save</button>
+          </div>
+        </div>
+
+        <!-- SKU BREAKDOWN -->
+        <div class="pr-section">
+          <div class="pr-section-title">📦 Stock on This Pallet</div>
+          ${skuRows}
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="pr-section" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" style="flex:1;" onclick="goAllocatePallet('${p.id}')">+ Allocate Stock</button>
+          <button class="btn btn-secondary btn-sm" onclick='openEditModal("pallet",${JSON.stringify({id:p.id,pallet_code:p.pallet_code,status:p.status,notes:p.notes,location_id:locId,rack_bay_id:p.rack_bays?.id||null})})'>✏ Edit Details</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePalletInline('${p.id}','${p.pallet_code}')">🗑</button>
+        </div>
+
       </div>
     </div>`;
   }).join('');
+
+  // Pre-load bays for each pallet that has a location
+  data.forEach(p => {
+    if (p.locations?.id) prLoadBays(p.id, p.rack_bays?.id);
+  });
+}
+
+function togglePalletRow(id) {
+  const body = document.getElementById(`pr-body-${id}`);
+  const chev = document.getElementById(`pr-chev-${id}`);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+async function prLoadBays(palletId, selectedBayId) {
+  const locId = document.getElementById(`pr-loc-${palletId}`)?.value;
+  const baysel = document.getElementById(`pr-bay-${palletId}`);
+  if (!baysel) return;
+  baysel.innerHTML = '<option value="">No bay assigned</option>';
+  if (!locId) return;
+  const { data } = await sb.from('rack_bays').select('*').eq('location_id', locId).eq('is_active', true).order('bay_code');
+  (data||[]).forEach(b => {
+    const o = new Option(b.bay_code, b.id);
+    if (b.id === selectedBayId) o.selected = true;
+    baysel.add(o);
+  });
+}
+
+async function saveInlinePallet(palletId) {
+  const locId = document.getElementById(`pr-loc-${palletId}`)?.value;
+  const bayId = document.getElementById(`pr-bay-${palletId}`)?.value || null;
+  const status = document.getElementById(`pr-status-${palletId}`)?.value;
+  if (!locId) return showToast('Please select a location', 'error');
+  await sb.from('pallets').update({ location_id: locId, rack_bay_id: bayId, status, last_moved_at: new Date().toISOString() }).eq('id', palletId);
+  showToast('Pallet updated!', 'success');
+  await refreshGlobal();
+  loadPallets(currentPalletFilter);
+}
+
+async function deletePalletInline(id, code) {
+  if (!confirm(`Delete pallet ${code}? All allocations will be removed.`)) return;
+  await sb.from('inventory_allocations').delete().eq('pallet_id', id);
+  await sb.from('pallets').delete().eq('id', id);
+  showToast('Pallet deleted', 'success');
+  await refreshGlobal();
+  loadPallets(currentPalletFilter);
+}
+
+function goAllocatePallet(palletId) {
+  showPage('inventory');
+  setTimeout(() => {
+    const sel = document.getElementById('alloc-pallet');
+    if (sel) sel.value = palletId;
+  }, 100);
 }
 
 async function savePallet() {
@@ -686,7 +899,7 @@ async function savePallet() {
   const { error } = id ? await sb.from('pallets').update(payload).eq('id',id) : await sb.from('pallets').insert({...payload,created_by:CU.id});
   if (error) { if(error.code==='23505') return showToast('Pallet code already exists','error'); return showToast('Error: '+error.message,'error'); }
   closeModal('modal-pallet'); showToast(id?'Pallet updated!':'Pallet created!','success');
-  await refreshGlobal(); loadPallets('all');
+  await refreshGlobal(); loadPallets(currentPalletFilter);
 }
 
 async function deletePallet() {
@@ -694,7 +907,7 @@ async function deletePallet() {
   await sb.from('inventory_allocations').delete().eq('pallet_id',id);
   await sb.from('pallets').delete().eq('id',id);
   closeModal('modal-pallet'); showToast('Pallet deleted','success');
-  await refreshGlobal(); loadPallets('all');
+  await refreshGlobal(); loadPallets(currentPalletFilter);
 }
 
 async function loadBaysForPallet() {
@@ -1230,6 +1443,57 @@ function fmtDate(s) { if(!s) return '—'; return new Date(s).toLocaleDateString
 function v(id) { const el=document.getElementById(id); return el?el.value:''; }
 
 init();
+
+// ================================================================
+// PWA — Install prompt + Service Worker
+// ================================================================
+let deferredInstallPrompt = null;
+
+// Catch the browser's install prompt and store it
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Show install button once app is loaded
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'block';
+});
+
+// Hide install button once app is installed
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'none';
+  showToast('INVO installed successfully! 🎉', 'success');
+});
+
+async function installApp() {
+  if (!deferredInstallPrompt) {
+    // Fallback instructions for iOS (Safari doesn't support beforeinstallprompt)
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS) {
+      alert('To install INVO on iPhone:\n\n1. Tap the Share button (box with arrow) at the bottom of Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" — done!');
+    } else {
+      alert('To install INVO:\n\nIn Chrome, tap the menu (⋮) in the top right and select "Install app" or "Add to Home Screen".');
+    }
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    deferredInstallPrompt = null;
+    const btn = document.getElementById('install-btn');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Service worker registration failed — app still works online
+    });
+  });
+}
 </script>
 </body>
 </html>
